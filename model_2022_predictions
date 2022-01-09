@@ -1,0 +1,282 @@
+#EXPLORATORY PLOTS
+ggplot(hitters_1820, aes(x = ba_rhp, y = hit_v_rhp, color = pa_rhp))+
+  geom_point(alpha = 0.5)+
+  scale_color_gradient(low = "blue", high = "red")
+
+ggplot(hitters_1820, aes(x = ba_lhp, y = hit_v_lhp, color = pa_lhp))+
+  geom_point(alpha = 0.5)+
+  scale_color_gradient(low = "blue", high = "red")
+
+ggplot(hitters_1820, aes(x = obp_rhp, y = ob_v_rhp, color = pa_rhp))+
+  geom_point(alpha = 0.5)+
+  scale_color_gradient(low = "blue", high = "red")
+
+ggplot(hitters_1820, aes(x = obp_lhp, y = ob_v_lhp, color = pa_lhp))+
+  geom_point(alpha = 0.5)+
+  scale_color_gradient(low = "blue", high = "red")
+
+ggplot(hitters_1820, aes(x = slg_rhp, y = tb_v_rhp, color = pa_rhp))+
+  geom_point(alpha = 0.5)+
+  scale_color_gradient(low = "blue", high = "red")
+
+ggplot(hitters_1820, aes(x = slg_lhp, y = tb_v_lhp, color = pa_lhp))+
+  geom_point(alpha = 0.5)+
+  scale_color_gradient(low = "blue", high = "red")
+
+#CREATE STRAT PRODUCTION RATING (OB CHANCES + TB CHANCES)
+hitters_1820_prod <- hitters_1820 %>% 
+  mutate(bats = as_factor(bats),
+         prod_v_rhp = ob_v_rhp/108 + tb_v_rhp/108,
+         prod_v_lhp = ob_v_lhp/108 + tb_v_lhp/108)
+
+pitchers_1820_prod <- pitchers_1820 %>% 
+  mutate(throws = as_factor(throws),
+         prod_v_rhh = ob_v_rhp/108 + tb_v_rhp/108,
+         prod_v_lhh = ob_v_lhp/108 + tb_v_lhp/108)
+
+#VISUALIZE HITTING PRODUCTION VS. REAL OPS (vs. RHP)
+hitters_1820_prod %>% 
+  select(bats:babip_lhp, prod_v_rhp) %>% 
+  ggplot(aes(x = ops_rhp, y = prod_v_rhp, color = pa_rhp))+
+  geom_point()+
+  scale_color_gradient(low = "blue", high = "red",
+                       name = "PA vs. RHP")+
+  labs(title = "2018-20 Strat-O-Matic Hitting Production Rating as Function of Real OPS (vs. RHP)",
+       x = "OPS vs. RHP (Real MLB)",
+       y = "Strat OB+TB Chances vs. RHP (Div. by 108)")
+
+#VISUALIZE HITTING PRODUCTION VS. REAL OPS (vs. LHP)
+hitters_1820_prod %>% 
+  select(bats:babip_lhp, prod_v_lhp) %>% 
+  ggplot(aes(x = ops_lhp, y = prod_v_lhp, color = pa_lhp))+
+  geom_point()+
+  scale_color_gradient(low = "blue", high = "red",
+                       name = "PA vs. LHP")+
+  labs(title = "2018-20 Strat-O-Matic Hitting Production Rating as Function of Real OPS (vs. LHP)",
+       x = "OPS vs. LHP (Real MLB)",
+       y = "Strat OB+TB Chances vs. LHP (Div. by 108)")
+
+#VISUALIZE PITCHING PRODUCTION VS. REAL OPS (vs. RHH)
+pitchers_1820_prod %>% 
+  select(throws:b_abip_lhh, prod_v_rhh) %>% 
+  ggplot(aes(x = ops_rhh, y = prod_v_rhh, color = ip_tot))+
+  geom_point()+
+  scale_color_gradient(low = "blue", high = "red",
+                       name = "Total IP")+
+  labs(title = "2018-20 Strat-O-Matic Pitching Production as Function of Real OPSa (vs. RHH)",
+       x = "OPSa vs. RHH (Real MLB)",
+       y = "Strat OB+TB Chances Against vs. RHH (Div. by 108)")
+
+#VISUALIZE PITCHING PRODUCTION VS. REAL OPS (vs. LHH)
+pitchers_1820_prod %>% 
+  select(throws:b_abip_lhh, prod_v_lhh) %>% 
+  ggplot(aes(x = ops_lhh, y = prod_v_lhh, color = ip_tot))+
+  geom_point()+
+  scale_color_gradient(low = "blue", high = "red",
+                       name = "Total IP")+
+  labs(title = "2018-20 Strat-O-Matic Pitching Production as Function of Real OPSa (vs. LHH)",
+       x = "OPSa vs. LHH (Real MLB)",
+       y = "Strat OB+TB Chances Against vs. LHH (Div. by 108)")
+
+#BUILD TREE MODEL (HITTERS VS. RHP)
+#CREATE MODEL SPEC
+spec <- boost_tree(trees = 500,
+                   learn_rate = tune(),
+                   tree_depth = tune(),
+                   sample_size = tune()) %>% 
+  set_engine("xgboost") %>% 
+  set_mode("regression")
+
+#SPLIT DATA/CREATE TRAINING AND TESTING SETS
+set.seed(123)
+hitters_rhp_split <- initial_split(hitters_1820_prod %>% 
+                select(pa_tot:babip_lhp, prod_v_rhp) %>% 
+                  mutate(prod_v_rhp = prod_v_rhp*108), prop = 0.7, strata = prod_v_rhp)
+
+hitters_rhp_train <- training(hitters_rhp_split)
+hitters_rhp_test <- testing(hitters_rhp_split)
+
+grid_results <- tune_grid(spec,
+                          prod_v_rhp ~ .,
+                          resamples = vfold_cv(hitters_rhp_train, v = 5),
+                          grid = grid_random(parameters(spec), size = 10),
+                          metrics = metric_set(rmse, rsq))
+
+hitters_rhp_final <- finalize_model(spec, select_best(grid_results, metric = "rmse"))
+
+hitters_rhp_fitted <- fit(hitters_rhp_final, prod_v_rhp ~ ., data = hitters_rhp_train)
+
+predict(hitters_rhp_fitted, new_data = hitters_rhp_test) %>% 
+  bind_cols(hitters_rhp_test) %>% 
+  metrics(truth = prod_v_rhp, estimate = .pred) %>% 
+  mutate(.estimate = round(.estimate, 3)) %>% 
+  gridExtra::grid.table()
+
+#PREDICT HITTERS VS. RHP ON 2021 MLB REAL DATA
+pred_hitters_2022_rhp <- predict(hitters_rhp_fitted, new_data = hitters_2021_test_data) %>% 
+  bind_cols(hitters_2021_test_data) %>% 
+  rename(pred_rhp = .pred)
+
+#BUILD TREE MODEL (HITTERS VS. LHP)
+#CREATE MODEL SPEC
+spec <- boost_tree(trees = 500,
+                   learn_rate = tune(),
+                   tree_depth = tune(),
+                   sample_size = tune()) %>% 
+  set_engine("xgboost") %>% 
+  set_mode("regression")
+
+#SPLIT DATA/CREATE TRAINING AND TESTING SETS
+set.seed(321)
+hitters_lhp_split <- initial_split(hitters_1820_prod %>% 
+                                     select(pa_tot:babip_lhp, prod_v_lhp) %>% 
+                                     mutate(prod_v_lhp = prod_v_lhp*108), prop = 0.7, strata = prod_v_lhp)
+
+hitters_lhp_train <- training(hitters_lhp_split)
+hitters_lhp_test <- testing(hitters_lhp_split)
+
+grid_results <- tune_grid(spec,
+                          prod_v_lhp ~ .,
+                          resamples = vfold_cv(hitters_lhp_train, v = 5),
+                          grid = grid_random(parameters(spec), size = 10),
+                          metrics = metric_set(rmse, rsq))
+
+hitters_lhp_final <- finalize_model(spec, select_best(grid_results, metric = "rmse"))
+
+hitters_lhp_fitted <- fit(hitters_lhp_final, prod_v_lhp ~ ., data = hitters_lhp_train)
+
+predict(hitters_lhp_fitted, new_data = hitters_lhp_test) %>% 
+  bind_cols(hitters_lhp_test) %>% 
+  metrics(truth = prod_v_lhp, estimate = .pred) %>% 
+  mutate(.estimate = round(.estimate, 3)) %>% 
+  gridExtra::grid.table()
+
+#PREDICT HITTERS VS. LHP ON 2021 MLB REAL DATA
+pred_hitters_2022_lhp <- predict(hitters_lhp_fitted, new_data = hitters_2021_test_data) %>% 
+  bind_cols(hitters_2021_test_data) %>% 
+  rename(pred_lhp = .pred)
+
+#WRITE HITTERS PREDICTIONS
+pred_hitters_2022_rhp %>% 
+  select(player_name, pa_tot, ops_rhp, pred_rhp, ops_lhp) %>% 
+  inner_join(pred_hitters_2022_lhp %>% 
+               select(player_name, pred_lhp), by = "player_name") %>% 
+  write_csv("strat_predictions_hitters_2022.csv")
+
+#BUILD TREE MODEL (PITCHERS VS. RHH)
+#CREATE MODEL SPEC
+spec <- boost_tree(trees = 500,
+                   learn_rate = tune(),
+                   tree_depth = tune(),
+                   sample_size = tune()) %>% 
+  set_engine("xgboost") %>% 
+  set_mode("regression")
+
+#SPLIT DATA/CREATE TRAINING AND TESTING SETS
+set.seed(213)
+pitchers_rhh_split <- initial_split(pitchers_1820_prod %>% 
+                                      select(g:b_abip_lhh, prod_v_rhh) %>% 
+                                      mutate(prod_v_rhh = prod_v_rhh*108), prop = 0.7, strata = prod_v_rhh)
+
+pitchers_rhh_train <- training(pitchers_rhh_split)
+pitchers_rhh_test <- testing(pitchers_rhh_split)
+
+grid_results <- tune_grid(spec,
+                          prod_v_rhh ~ .,
+                          resamples = vfold_cv(pitchers_rhh_train, v = 5),
+                          grid = grid_random(parameters(spec), size = 10),
+                          metrics = metric_set(rmse, rsq))
+
+pitchers_rhh_final <- finalize_model(spec, select_best(grid_results, metric = "rmse"))
+
+pitchers_rhh_fitted <- fit(pitchers_rhh_final, prod_v_rhh ~ ., data = pitchers_rhh_train)
+
+predict(pitchers_rhh_fitted, new_data = pitchers_rhh_test) %>% 
+  bind_cols(pitchers_rhh_test) %>% 
+  metrics(truth = prod_v_rhh, estimate = .pred) %>% 
+  mutate(.estimate = round(.estimate, 3)) %>% 
+  gridExtra::grid.table()
+
+#PREDICT PITCHERS VS. RHH ON 2021 MLB REAL DATA
+pred_pitchers_2022_rhh <- predict(pitchers_rhh_fitted, new_data = pitchers_2021_test_data) %>% 
+  bind_cols(pitchers_2021_test_data) %>% 
+  rename(pred_rhh = .pred)
+
+#BUILD TREE MODEL (PITCHERS VS. LHH)
+#CREATE MODEL SPEC
+spec <- boost_tree(trees = 500,
+                   learn_rate = tune(),
+                   tree_depth = tune(),
+                   sample_size = tune()) %>% 
+  set_engine("xgboost") %>% 
+  set_mode("regression")
+
+#SPLIT DATA/CREATE TRAINING AND TESTING SETS
+set.seed(145)
+pitchers_lhh_split <- initial_split(pitchers_1820_prod %>% 
+                                      select(g:b_abip_lhh, prod_v_lhh) %>% 
+                                      mutate(prod_v_lhh = prod_v_lhh*108), prop = 0.7, strata = prod_v_lhh)
+
+pitchers_lhh_train <- training(pitchers_lhh_split)
+pitchers_lhh_test <- testing(pitchers_lhh_split)
+
+grid_results <- tune_grid(spec,
+                          prod_v_lhh ~ .,
+                          resamples = vfold_cv(pitchers_lhh_train, v = 5),
+                          grid = grid_random(parameters(spec), size = 10),
+                          metrics = metric_set(rmse, rsq))
+
+pitchers_lhh_final <- finalize_model(spec, select_best(grid_results, metric = "rmse"))
+
+pitchers_lhh_fitted <- fit(pitchers_lhh_final, prod_v_lhh ~ ., data = pitchers_lhh_train)
+
+predict(pitchers_lhh_fitted, new_data = pitchers_lhh_test) %>% 
+  bind_cols(pitchers_lhh_test) %>% 
+  metrics(truth = prod_v_lhh, estimate = .pred) %>% 
+  mutate(.estimate = round(.estimate, 3)) %>% 
+  gridExtra::grid.table()
+
+#PREDICT PITCHERS VS. LHH ON 2021 MLB REAL DATA
+pred_pitchers_2022_lhh <- predict(pitchers_lhh_fitted, new_data = pitchers_2021_test_data) %>% 
+  bind_cols(pitchers_2021_test_data) %>% 
+  rename(pred_lhh = .pred)
+
+#WRITE PITCHERS PREDICTIONS
+pred_pitchers_2022_rhh %>% 
+  select(player_name, ip_tot, ops_rhh, pred_rhh, ops_lhh) %>% 
+  inner_join(pred_pitchers_2022_lhh %>% 
+               select(player_name, pred_lhh), by = "player_name") %>% 
+  write_csv("strat_predictions_pitchers_2022.csv")
+
+#VISUALIZE TEST PERFORMANCE
+predict(hitters_rhp_fitted, new_data = hitters_rhp_test) %>% 
+  bind_cols(hitters_rhp_test) %>% 
+  ggplot(aes(x = prod_v_rhp, y = .pred))+
+  geom_point()+
+  labs(title = "XGBoost Model Performance on Test Data (Hitters vs. RHP)",
+       x = "Truth (Strat-O-Matic Hitter Production vs. RHP)",
+       y = "Estimate (Strat-O-Matic Hitter Production vs. RHP)")
+
+predict(hitters_lhp_fitted, new_data = hitters_lhp_test) %>% 
+  bind_cols(hitters_lhp_test) %>% 
+  ggplot(aes(x = prod_v_lhp, y = .pred))+
+  geom_point()+
+  labs(title = "XGBoost Model Performance on Test Data (Hitters vs. LHP)",
+       x = "Truth (Strat-O-Matic Hitter Production vs. LHP)",
+       y = "Estimate (Strat-O-Matic Hitter Production vs. LHP)")
+
+predict(pitchers_rhh_fitted, new_data = pitchers_rhh_test) %>% 
+  bind_cols(pitchers_rhh_test) %>% 
+  ggplot(aes(x = prod_v_rhh, y = .pred))+
+  geom_point()+
+  labs(title = "XGBoost Model Performance on Test Data (Pitchers vs. RHH)",
+       x = "Truth (Strat-O-Matic Pitcher Production vs. RHH)",
+       y = "Estimate (Strat-O-Matic Pitcher Production vs. RHH)")
+
+predict(pitchers_lhh_fitted, new_data = pitchers_lhh_test) %>% 
+  bind_cols(pitchers_lhh_test) %>% 
+  ggplot(aes(x = prod_v_lhh, y = .pred))+
+  geom_point()+
+  labs(title = "XGBoost Model Performance on Test Data (Pitchers vs. LHH)",
+       x = "Truth (Strat-O-Matic Pitcher Production vs. LHH)",
+       y = "Estimate (Strat-O-Matic Pitcher Production vs. LHH)")
