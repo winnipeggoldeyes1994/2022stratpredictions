@@ -1,0 +1,543 @@
+#CLEAN 2018 HITTERS VS RHP
+clean_hitters_2018_vs_rhp <- hitters_2018_vs_rhp %>% 
+  clean_names() %>% 
+  relocate(year) %>% 
+  separate(player, into = c("player_name", "id"), sep = BACKSLASH) %>% 
+  mutate(player_name = str_remove_all(player_name, DOT),
+         player_name = str_remove(player_name, "Jr"),
+         player_name = str_trim(player_name),
+         first_name = str_extract(player_name, START %R% one_or_more(ALPHA)),
+         last_name = str_remove(player_name, START %R% one_or_more(ALPHA)),
+         last_name = str_trim(last_name),
+         first_initial = str_extract(player_name, START %R% ALPHA)) %>% 
+  mutate(strat_name = paste(last_name, ",", first_initial, sep = ""),
+         strat_name = str_to_title(strat_name)) %>% 
+  select(year, player_name, strat_name, pa, ab, h:ibb, babip = b_abip, id)
+
+#CLEAN 2018 HITTERS VS LHP
+clean_hitters_2018_vs_lhp <- hitters_2018_vs_lhp %>% 
+  clean_names() %>% 
+  relocate(year) %>% 
+  separate(player, into = c("player_name", "id"), sep = BACKSLASH) %>% 
+  mutate(player_name = str_remove_all(player_name, DOT),
+         player_name = str_remove(player_name, "Jr"),
+         player_name = str_trim(player_name),
+         first_name = str_extract(player_name, START %R% one_or_more(ALPHA)),
+         last_name = str_remove(player_name, START %R% one_or_more(ALPHA)),
+         last_name = str_trim(last_name),
+         first_initial = str_extract(player_name, START %R% ALPHA)) %>% 
+  mutate(strat_name = paste(last_name, ",", first_initial, sep = ""),
+         strat_name = str_to_title(strat_name)) %>% 
+  select(year, player_name, strat_name, pa, ab, h:ibb, babip = b_abip, id)
+
+#CLEAN 2018 HITTER RATINGS
+clean_ratings_hitters_2018 <- ratings_2018_hitters %>% 
+  clean_names() %>% 
+  mutate(year = 2018) %>% 
+  relocate(year) %>% 
+  rename(strat_name = hitters) %>% 
+  mutate(bats = str_extract(strat_name, or(PLUS, STAR)),
+         strat_name = str_remove(strat_name, or(PLUS, STAR)),
+         bats = str_replace(bats, PLUS, "S"),
+         bats = str_replace(bats, STAR, "L"),
+         strat_name = str_remove(strat_name, "Jr"),
+         strat_name = str_trim(strat_name)) %>% 
+  replace_na(list(bats = "R")) %>% 
+  relocate(bats, .before = ab) %>% 
+  select(year, strat_name:ab, hit_v_rhp:cl_v_rhp, bb_v_rhp, so_v_rhp, dp_v_rhp,
+         hit_v_lhp:cl_v_lhp, bb_v_lhp, so_v_lhp = so_vlhp, dp_v_lhp, stealing:fielding)
+
+#MERGE 2018 HITTERS VS RHP, HITTERS VS LHP, AND HITTER RATINGS
+hitters_2018_joined <- full_join(clean_hitters_2018_vs_rhp, clean_hitters_2018_vs_lhp, by = c("year", "player_name", "strat_name", "id"),
+          suffix = c("_rhp", "_lhp")) %>% 
+  mutate(pa_tot = pa_rhp+pa_lhp,
+         ab_tot = ab_rhp+ab_lhp) %>% 
+  relocate(pa_tot:ab_tot, .before = pa_rhp) %>% 
+  arrange(desc(ab_tot)) %>% 
+  inner_join(clean_ratings_hitters_2018, by = c("year", "strat_name", "ab_tot" = "ab")) %>% 
+  relocate(bats, .before = pa_tot)
+
+
+#CLEAN 2019 HITTERS VS RHP
+clean_hitters_2019_vs_rhp <- hitters_2019_vs_rhp %>% 
+  clean_names() %>% 
+  relocate(year) %>% 
+  separate(player, into = c("player_name", "id"), sep = BACKSLASH) %>% 
+  mutate(player_name = str_remove_all(player_name, DOT),
+         player_name = str_remove(player_name, "Jr"),
+         player_name = str_trim(player_name),
+         first_name = str_extract(player_name, START %R% one_or_more(ALPHA)),
+         last_name = str_remove(player_name, START %R% one_or_more(ALPHA)),
+         last_name = str_trim(last_name),
+         first_initial = str_extract(player_name, START %R% ALPHA)) %>% 
+  mutate(strat_name = paste(last_name, ",", first_initial, sep = ""),
+         strat_name = str_to_title(strat_name)) %>% 
+  select(year, player_name, strat_name, pa, ab, h:ibb, babip = b_abip, id)
+
+#CLEAN 2019 HITTERS VS LHP
+clean_hitters_2019_vs_lhp <- hitters_2019_vs_lhp %>% 
+  clean_names() %>% 
+  relocate(year) %>% 
+  separate(player, into = c("player_name", "id"), sep = BACKSLASH) %>% 
+  mutate(player_name = str_remove_all(player_name, DOT),
+         player_name = str_remove(player_name, "Jr"),
+         player_name = str_trim(player_name),
+         first_name = str_extract(player_name, START %R% one_or_more(ALPHA)),
+         last_name = str_remove(player_name, START %R% one_or_more(ALPHA)),
+         last_name = str_trim(last_name),
+         first_initial = str_extract(player_name, START %R% ALPHA)) %>% 
+  mutate(strat_name = paste(last_name, ",", first_initial, sep = ""),
+         strat_name = str_to_title(strat_name)) %>% 
+  select(year, player_name, strat_name, pa, ab, h:ibb, babip = b_abip, id)
+
+#CLEAN 2019 HITTER RATINGS
+clean_ratings_hitters_2019 <- ratings_2019_hitters %>% 
+  clean_names() %>% 
+  mutate(year = 2019) %>% 
+  relocate(year) %>% 
+  rename(strat_name = hitters) %>% 
+  mutate(bats = str_extract(strat_name, or(PLUS, STAR)),
+         strat_name = str_remove(strat_name, or(PLUS, STAR)),
+         bats = str_replace(bats, PLUS, "S"),
+         bats = str_replace(bats, STAR, "L"),
+         strat_name = str_remove(strat_name, "Jr"),
+         strat_name = str_trim(strat_name)) %>% 
+  replace_na(list(bats = "R")) %>% 
+  relocate(bats, .before = ab) %>% 
+  select(year, strat_name:ab, hit_v_rhp:cl_v_rhp, bb_v_rhp, so_v_rhp, dp_v_rhp,
+         hit_v_lhp:cl_v_lhp, bb_v_lhp, so_v_lhp = so_vlhp, dp_v_lhp, stealing:fielding, -inj)
+
+#MERGE 2019 HITTERS VS RHP, HITTERS VS LHP, AND HITTER RATINGS
+hitters_2019_joined <- full_join(clean_hitters_2019_vs_rhp, clean_hitters_2019_vs_lhp, by = c("year", "player_name", "strat_name", "id"),
+                                 suffix = c("_rhp", "_lhp")) %>% 
+  mutate(pa_tot = pa_rhp+pa_lhp,
+         ab_tot = ab_rhp+ab_lhp) %>% 
+  relocate(pa_tot:ab_tot, .before = pa_rhp) %>% 
+  arrange(desc(ab_tot)) %>% 
+  inner_join(clean_ratings_hitters_2019, by = c("year", "strat_name", "ab_tot" = "ab")) %>% 
+  relocate(bats, .before = pa_tot)
+
+
+#CLEAN 2020 HITTERS VS RHP
+clean_hitters_2020_vs_rhp <- hitters_2020_vs_rhp %>% 
+  clean_names() %>% 
+  relocate(year) %>% 
+  separate(player, into = c("player_name", "id"), sep = BACKSLASH) %>% 
+  mutate(player_name = str_remove_all(player_name, DOT),
+         player_name = str_remove(player_name, "Jr"),
+         player_name = str_trim(player_name),
+         first_name = str_extract(player_name, START %R% one_or_more(ALPHA)),
+         last_name = str_remove(player_name, START %R% one_or_more(ALPHA)),
+         last_name = str_trim(last_name),
+         first_initial = str_extract(player_name, START %R% ALPHA)) %>% 
+  mutate(strat_name = paste(last_name, ",", first_initial, sep = ""),
+         strat_name = str_to_title(strat_name)) %>% 
+  select(year, player_name, strat_name, pa, ab, h:ibb, babip = b_abip, id)
+
+#CLEAN 2020 HITTERS VS LHP
+clean_hitters_2020_vs_lhp <- hitters_2020_vs_lhp %>% 
+  clean_names() %>% 
+  relocate(year) %>% 
+  separate(player, into = c("player_name", "id"), sep = BACKSLASH) %>% 
+  mutate(player_name = str_remove_all(player_name, DOT),
+         player_name = str_remove(player_name, "Jr"),
+         player_name = str_trim(player_name),
+         first_name = str_extract(player_name, START %R% one_or_more(ALPHA)),
+         last_name = str_remove(player_name, START %R% one_or_more(ALPHA)),
+         last_name = str_trim(last_name),
+         first_initial = str_extract(player_name, START %R% ALPHA)) %>% 
+  mutate(strat_name = paste(last_name, ",", first_initial, sep = ""),
+         strat_name = str_to_title(strat_name)) %>% 
+  select(year, player_name, strat_name, pa, ab, h:ibb, babip = b_abip, id)
+
+#CLEAN 2020 HITTER RATINGS
+clean_ratings_hitters_2020 <- ratings_2020_hitters %>% 
+  clean_names() %>% 
+  mutate(year = 2020) %>% 
+  relocate(year) %>% 
+  rename(strat_name = hitters) %>% 
+  mutate(bats = str_extract(strat_name, or(PLUS, STAR)),
+         strat_name = str_remove(strat_name, or(PLUS, STAR)),
+         bats = str_replace(bats, PLUS, "S"),
+         bats = str_replace(bats, STAR, "L"),
+         strat_name = str_remove(strat_name, "Jr"),
+         strat_name = str_trim(strat_name)) %>% 
+  replace_na(list(bats = "R")) %>% 
+  relocate(bats, .before = ab) %>% 
+  select(year, strat_name:ab, hit_v_rhp:cl_v_rhp, bb_v_rhp, so_v_rhp, dp_v_rhp,
+         hit_v_lhp:cl_v_lhp, bb_v_lhp, so_v_lhp = so_vlhp, dp_v_lhp, stealing:fielding, -inj)
+
+#MERGE 2020 HITTERS VS RHP, HITTERS VS LHP, AND HITTER RATINGS
+hitters_2020_joined <- full_join(clean_hitters_2020_vs_rhp, clean_hitters_2020_vs_lhp, by = c("year", "player_name", "strat_name", "id"),
+                                 suffix = c("_rhp", "_lhp")) %>% 
+  mutate(pa_tot = pa_rhp+pa_lhp,
+         ab_tot = ab_rhp+ab_lhp) %>% 
+  relocate(pa_tot:ab_tot, .before = pa_rhp) %>% 
+  arrange(desc(ab_tot)) %>% 
+  inner_join(clean_ratings_hitters_2020, by = c("year", "strat_name", "ab_tot" = "ab")) %>% 
+  relocate(bats, .before = pa_tot)
+
+
+#MERGE JOINED HITTER TABLES 2018-20
+hitters_1820 <- bind_rows(hitters_2018_joined, hitters_2019_joined, hitters_2020_joined) %>% 
+  relocate(id, .after = fielding)
+
+
+#CLEAN 2021 HITTERS VS RHP
+clean_hitters_2021_vs_rhp <- hitters_2021_vs_rhp %>% 
+  clean_names() %>% 
+  relocate(year) %>% 
+  separate(player, into = c("player_name", "id"), sep = BACKSLASH) %>% 
+  mutate(player_name = str_remove_all(player_name, DOT),
+         player_name = str_remove(player_name, "Jr"),
+         player_name = str_trim(player_name),
+         first_name = str_extract(player_name, START %R% one_or_more(ALPHA)),
+         last_name = str_remove(player_name, START %R% one_or_more(ALPHA)),
+         last_name = str_trim(last_name),
+         first_initial = str_extract(player_name, START %R% ALPHA)) %>% 
+  mutate(strat_name = paste(last_name, ",", first_initial, sep = ""),
+         strat_name = str_to_title(strat_name)) %>% 
+  select(year, player_name, strat_name, pa, ab, h:ibb, babip = b_abip, id)
+
+#CLEAN 2021 HITTERS VS LHP
+clean_hitters_2021_vs_lhp <- hitters_2021_vs_lhp %>% 
+  clean_names() %>% 
+  relocate(year) %>% 
+  separate(player, into = c("player_name", "id"), sep = BACKSLASH) %>% 
+  mutate(player_name = str_remove_all(player_name, DOT),
+         player_name = str_remove(player_name, "Jr"),
+         player_name = str_trim(player_name),
+         first_name = str_extract(player_name, START %R% one_or_more(ALPHA)),
+         last_name = str_remove(player_name, START %R% one_or_more(ALPHA)),
+         last_name = str_trim(last_name),
+         first_initial = str_extract(player_name, START %R% ALPHA)) %>% 
+  mutate(strat_name = paste(last_name, ",", first_initial, sep = ""),
+         strat_name = str_to_title(strat_name)) %>% 
+  select(year, player_name, strat_name, pa, ab, h:ibb, babip = b_abip, id)
+
+#CREATE 2021 REAL BALL HITTERS TEST SET
+hitters_2021_test_data <- full_join(clean_hitters_2021_vs_rhp, clean_hitters_2021_vs_lhp, by = c("year", "player_name", "strat_name", "id"),
+                                    suffix = c("_rhp", "_lhp")) %>% 
+  mutate(pa_tot = pa_rhp+pa_lhp,
+         ab_tot = ab_rhp+ab_lhp) %>% 
+  relocate(pa_tot:ab_tot, .before = pa_rhp) %>% 
+  arrange(desc(ab_tot))
+
+#CLEAN INTERMEDIATE HITTING TABLES
+remove(clean_hitters_2018_vs_lhp,
+       clean_hitters_2018_vs_rhp,
+       clean_hitters_2019_vs_lhp,
+       clean_hitters_2019_vs_rhp,
+       clean_hitters_2020_vs_lhp,
+       clean_hitters_2020_vs_rhp,
+       clean_hitters_2021_vs_lhp,
+       clean_hitters_2021_vs_rhp,
+       clean_ratings_hitters_2018,
+       clean_ratings_hitters_2019,
+       clean_ratings_hitters_2020,
+       hitters_2018_joined,
+       hitters_2019_joined,
+       hitters_2020_joined,
+       hitters_2018_vs_lhp,
+       hitters_2018_vs_rhp,
+       hitters_2019_vs_lhp,
+       hitters_2019_vs_rhp,
+       hitters_2020_vs_lhp,
+       hitters_2020_vs_rhp,
+       hitters_2021_vs_lhp,
+       hitters_2021_vs_rhp,
+       ratings_2018_hitters,
+       ratings_2019_hitters,
+       ratings_2020_hitters)
+
+
+#CLEAN 2018 PITCHERS VS RHH
+clean_pitchers_2018_vs_rhh <- pitchers_2018_vs_rhh %>% 
+  clean_names() %>% 
+  relocate(year) %>% 
+  separate(player, into = c("player_name", "id"), sep = BACKSLASH) %>% 
+  mutate(player_name = str_remove_all(player_name, DOT),
+         player_name = str_remove(player_name, "Jr"),
+         player_name = str_trim(player_name),
+         first_name = str_extract(player_name, START %R% one_or_more(ALPHA)),
+         last_name = str_remove(player_name, START %R% one_or_more(ALPHA)),
+         last_name = str_trim(last_name),
+         first_initial = str_extract(player_name, START %R% ALPHA),
+         strat_name = paste(last_name, ",", first_initial, sep = ""),
+         strat_name = str_to_title(strat_name),
+         ip = str_replace(ip, DOT %R% "1", DOT %R% "33"),
+         ip = str_replace(ip, DOT %R% "2", DOT %R% "67"),
+         ip = as.numeric(ip)) %>% 
+  select(year, player_name, strat_name, bf, ip, g:gs, h = h_18, hr = hr_21, bb = bb_22, ibb = ibb_23, so = so_25,
+         hbp = hbp_26, bk, wp, whip, ab, x2b:x3b, sb:cs, ba:ops, tb:gdp, sf, b_abip, id)
+
+#CLEAN 2018 PITCHERS VS LHH
+clean_pitchers_2018_vs_lhh <- pitchers_2018_vs_lhh %>% 
+  clean_names() %>% 
+  relocate(year) %>% 
+  separate(player, into = c("player_name", "id"), sep = BACKSLASH) %>% 
+  mutate(player_name = str_remove_all(player_name, DOT),
+         player_name = str_remove(player_name, "Jr"),
+         player_name = str_trim(player_name),
+         first_name = str_extract(player_name, START %R% one_or_more(ALPHA)),
+         last_name = str_remove(player_name, START %R% one_or_more(ALPHA)),
+         last_name = str_trim(last_name),
+         first_initial = str_extract(player_name, START %R% ALPHA),
+         strat_name = paste(last_name, ",", first_initial, sep = ""),
+         strat_name = str_to_title(strat_name),
+         ip = str_replace(ip, DOT %R% "1", DOT %R% "33"),
+         ip = str_replace(ip, DOT %R% "2", DOT %R% "67"),
+         ip = as.numeric(ip)) %>% 
+  select(year, player_name, strat_name, bf, ip, h = h_18, hr = hr_21, bb = bb_22, ibb = ibb_23, so = so_25,
+         hbp = hbp_26, bk, wp, whip, ab, x2b:x3b, sb:cs, ba:ops, tb:gdp, sf, b_abip, id)
+
+#CLEAN 2018 PITCHER RATINGS
+clean_ratings_pitchers_2018 <- ratings_2018_pitchers %>% 
+  clean_names() %>% 
+  mutate(year = 2018) %>% 
+  relocate(year) %>% 
+  rename(strat_name = pitchers) %>% 
+  mutate(throws = str_extract(strat_name, STAR),
+         strat_name = str_remove(strat_name, STAR),
+         throws = str_replace(throws, STAR, "L"),
+         strat_name = str_remove(strat_name, "Jr"),
+         strat_name = str_trim(strat_name),
+         sp_end = parse_number(str_extract(endurance, or("S" %R% OPEN_PAREN %R% DGT %R% CLOSE_PAREN, "S" %R% OPEN_PAREN %R% DGT %R% STAR %R% CLOSE_PAREN))),
+         rp_end = parse_number(str_extract(endurance, "R" %R% OPEN_PAREN %R% DGT %R% CLOSE_PAREN)),
+         cl_rat = parse_number(str_extract(endurance, "C" %R% OPEN_PAREN %R% DGT %R% CLOSE_PAREN))) %>% 
+  replace_na(list(throws = "R")) %>% 
+  relocate(throws, .before = ip) %>% 
+  select(year, strat_name:ip, sp_end, rp_end, cl_rat, hit_v_rhp:bp_v_rhp, bb_v_rhp, so_v_rhp, dp_v_rhp,
+         hit_v_lhp:bp_v_lhp, bb_v_lhp = bb_vlhp, so_v_lhp = so_vlhp, dp_v_lhp = dp_vlhp,
+         ho, bk, wp, bat_b:spd, endurance)
+
+#MERGE 2018 PITCHERS VS RHP, PITCHERS VS LHP, AND PITCHER RATINGS
+pitchers_2018_joined <- full_join(clean_pitchers_2018_vs_rhh, clean_pitchers_2018_vs_lhh, by = c("year", "player_name", "strat_name", "id"),
+                                  suffix = c("_rhh", "_lhh")) %>% 
+  mutate(ip_tot = round(ip_rhh+ip_lhh)) %>% 
+  relocate(ip_tot, .before = bf_rhh) %>% 
+  arrange(desc(ip_tot)) %>% 
+  inner_join(clean_ratings_pitchers_2018, by = c("year", "strat_name", "ip_tot" = "ip")) %>% 
+  relocate(throws, .before = ip_tot)
+
+
+#CLEAN 2019 PITCHERS VS RHH
+clean_pitchers_2019_vs_rhh <- pitchers_2019_vs_rhh %>% 
+  clean_names() %>% 
+  relocate(year) %>% 
+  separate(player, into = c("player_name", "id"), sep = BACKSLASH) %>% 
+  mutate(player_name = str_remove_all(player_name, DOT),
+         player_name = str_remove(player_name, "Jr"),
+         player_name = str_trim(player_name),
+         first_name = str_extract(player_name, START %R% one_or_more(ALPHA)),
+         last_name = str_remove(player_name, START %R% one_or_more(ALPHA)),
+         last_name = str_trim(last_name),
+         first_initial = str_extract(player_name, START %R% ALPHA),
+         strat_name = paste(last_name, ",", first_initial, sep = ""),
+         strat_name = str_to_title(strat_name),
+         ip = str_replace(ip, DOT %R% "1", DOT %R% "33"),
+         ip = str_replace(ip, DOT %R% "2", DOT %R% "67"),
+         ip = as.numeric(ip)) %>% 
+  select(year, player_name, strat_name, bf, ip, g:gs, h = h_18, hr = hr_21, bb = bb_22, ibb = ibb_23, so = so_25,
+         hbp = hbp_26, bk, wp, whip, ab, x2b:x3b, sb:cs, ba:ops, tb:gdp, sf, b_abip, id)
+
+#CLEAN 2019 PITCHERS VS LHH
+clean_pitchers_2019_vs_lhh <- pitchers_2019_vs_lhh %>% 
+  clean_names() %>% 
+  relocate(year) %>% 
+  separate(player, into = c("player_name", "id"), sep = BACKSLASH) %>% 
+  mutate(player_name = str_remove_all(player_name, DOT),
+         player_name = str_remove(player_name, "Jr"),
+         player_name = str_trim(player_name),
+         first_name = str_extract(player_name, START %R% one_or_more(ALPHA)),
+         last_name = str_remove(player_name, START %R% one_or_more(ALPHA)),
+         last_name = str_trim(last_name),
+         first_initial = str_extract(player_name, START %R% ALPHA),
+         strat_name = paste(last_name, ",", first_initial, sep = ""),
+         strat_name = str_to_title(strat_name),
+         ip = str_replace(ip, DOT %R% "1", DOT %R% "33"),
+         ip = str_replace(ip, DOT %R% "2", DOT %R% "67"),
+         ip = as.numeric(ip)) %>% 
+  select(year, player_name, strat_name, bf, ip, h = h_18, hr = hr_21, bb = bb_22, ibb = ibb_23, so = so_25,
+         hbp = hbp_26, bk, wp, whip, ab, x2b:x3b, sb:cs, ba:ops, tb:gdp, sf, b_abip, id)
+
+#CLEAN 2019 PITCHER RATINGS
+clean_ratings_pitchers_2019 <- ratings_2019_pitchers %>% 
+  clean_names() %>% 
+  mutate(year = 2019) %>% 
+  relocate(year) %>% 
+  rename(strat_name = pitchers) %>% 
+  mutate(throws = str_extract(strat_name, STAR),
+         strat_name = str_remove(strat_name, STAR),
+         throws = str_replace(throws, STAR, "L"),
+         strat_name = str_remove(strat_name, "Jr"),
+         strat_name = str_trim(strat_name),
+         sp_end = parse_number(str_extract(endurance, or("S" %R% OPEN_PAREN %R% DGT %R% CLOSE_PAREN, "S" %R% OPEN_PAREN %R% DGT %R% STAR %R% CLOSE_PAREN))),
+         rp_end = parse_number(str_extract(endurance, "R" %R% OPEN_PAREN %R% DGT %R% CLOSE_PAREN)),
+         cl_rat = parse_number(str_extract(endurance, "C" %R% OPEN_PAREN %R% DGT %R% CLOSE_PAREN))) %>% 
+  replace_na(list(throws = "R")) %>% 
+  relocate(throws, .before = ip) %>% 
+  select(year, strat_name:ip, sp_end, rp_end, cl_rat, hit_v_rhp:bp_v_rhp, bb_v_rhp, so_v_rhp, dp_v_rhp,
+         hit_v_lhp:bp_v_lhp, bb_v_lhp = bb_vlhp, so_v_lhp = so_vlhp, dp_v_lhp = dp_vlhp,
+         ho, bk, wp, bat_b:spd, endurance)
+
+#MERGE 2019 PITCHERS VS RHP, PITCHERS VS LHP, AND PITCHER RATINGS
+pitchers_2019_joined <- full_join(clean_pitchers_2019_vs_rhh, clean_pitchers_2019_vs_lhh, by = c("year", "player_name", "strat_name", "id"),
+                                  suffix = c("_rhh", "_lhh")) %>% 
+  mutate(ip_tot = round(ip_rhh+ip_lhh)) %>% 
+  relocate(ip_tot, .before = bf_rhh) %>% 
+  arrange(desc(ip_tot)) %>% 
+  inner_join(clean_ratings_pitchers_2019, by = c("year", "strat_name", "ip_tot" = "ip")) %>% 
+  relocate(throws, .before = ip_tot)
+
+
+#CLEAN 2020 PITCHERS VS RHH
+clean_pitchers_2020_vs_rhh <- pitchers_2020_vs_rhh %>% 
+  clean_names() %>% 
+  relocate(year) %>% 
+  separate(player, into = c("player_name", "id"), sep = BACKSLASH) %>% 
+  mutate(player_name = str_remove_all(player_name, DOT),
+         player_name = str_remove(player_name, "Jr"),
+         player_name = str_trim(player_name),
+         first_name = str_extract(player_name, START %R% one_or_more(ALPHA)),
+         last_name = str_remove(player_name, START %R% one_or_more(ALPHA)),
+         last_name = str_trim(last_name),
+         first_initial = str_extract(player_name, START %R% ALPHA),
+         strat_name = paste(last_name, ",", first_initial, sep = ""),
+         strat_name = str_to_title(strat_name),
+         ip = str_replace(ip, DOT %R% "1", DOT %R% "33"),
+         ip = str_replace(ip, DOT %R% "2", DOT %R% "67"),
+         ip = as.numeric(ip)) %>% 
+  select(year, player_name, strat_name, bf, ip, g:gs, h = h_18, hr = hr_21, bb = bb_22, ibb = ibb_23, so = so_25,
+         hbp = hbp_26, bk, wp, whip, ab, x2b:x3b, sb:cs, ba:ops, tb:gdp, sf, b_abip, id)
+
+#CLEAN 2020 PITCHERS VS LHH
+clean_pitchers_2020_vs_lhh <- pitchers_2020_vs_lhh %>% 
+  clean_names() %>% 
+  relocate(year) %>% 
+  separate(player, into = c("player_name", "id"), sep = BACKSLASH) %>% 
+  mutate(player_name = str_remove_all(player_name, DOT),
+         player_name = str_remove(player_name, "Jr"),
+         player_name = str_trim(player_name),
+         first_name = str_extract(player_name, START %R% one_or_more(ALPHA)),
+         last_name = str_remove(player_name, START %R% one_or_more(ALPHA)),
+         last_name = str_trim(last_name),
+         first_initial = str_extract(player_name, START %R% ALPHA),
+         strat_name = paste(last_name, ",", first_initial, sep = ""),
+         strat_name = str_to_title(strat_name),
+         ip = str_replace(ip, DOT %R% "1", DOT %R% "33"),
+         ip = str_replace(ip, DOT %R% "2", DOT %R% "67"),
+         ip = as.numeric(ip)) %>% 
+  select(year, player_name, strat_name, bf, ip, h = h_18, hr = hr_21, bb = bb_22, ibb = ibb_23, so = so_25,
+         hbp = hbp_26, bk, wp, whip, ab, x2b:x3b, sb:cs, ba:ops, tb:gdp, sf, b_abip, id)
+
+#CLEAN 2020 PITCHER RATINGS
+clean_ratings_pitchers_2020 <- ratings_2020_pitchers %>% 
+  clean_names() %>% 
+  mutate(year = 2020) %>% 
+  relocate(year) %>% 
+  rename(strat_name = pitchers) %>% 
+  mutate(throws = str_extract(strat_name, STAR),
+         strat_name = str_remove(strat_name, STAR),
+         throws = str_replace(throws, STAR, "L"),
+         strat_name = str_remove(strat_name, "Jr"),
+         strat_name = str_trim(strat_name),
+         sp_end = parse_number(str_extract(endurance, or("S" %R% OPEN_PAREN %R% DGT %R% CLOSE_PAREN, "S" %R% OPEN_PAREN %R% DGT %R% STAR %R% CLOSE_PAREN))),
+         rp_end = parse_number(str_extract(endurance, "R" %R% OPEN_PAREN %R% DGT %R% CLOSE_PAREN)),
+         cl_rat = parse_number(str_extract(endurance, "C" %R% OPEN_PAREN %R% DGT %R% CLOSE_PAREN))) %>% 
+  replace_na(list(throws = "R")) %>% 
+  relocate(throws, .before = ip) %>% 
+  select(year, strat_name:ip, sp_end, rp_end, cl_rat, hit_v_rhp:bp_v_rhp, bb_v_rhp, so_v_rhp, dp_v_rhp,
+         hit_v_lhp:bp_v_lhp, bb_v_lhp = bb_vlhp, so_v_lhp = so_vlhp, dp_v_lhp = dp_vlhp,
+         ho, bk, wp, bat_b:spd, endurance)
+
+#MERGE 2020 PITCHERS VS RHP, PITCHERS VS LHP, AND PITCHER RATINGS
+pitchers_2020_joined <- full_join(clean_pitchers_2020_vs_rhh, clean_pitchers_2020_vs_lhh, by = c("year", "player_name", "strat_name", "id"),
+                                  suffix = c("_rhh", "_lhh")) %>% 
+  mutate(ip_tot = round(ip_rhh+ip_lhh)) %>% 
+  relocate(ip_tot, .before = bf_rhh) %>% 
+  arrange(desc(ip_tot)) %>% 
+  inner_join(clean_ratings_pitchers_2020, by = c("year", "strat_name", "ip_tot" = "ip")) %>% 
+  relocate(throws, .before = ip_tot)
+
+#MERGE JOINED PITCHER TABLES 2018-20
+pitchers_1820 <- bind_rows(pitchers_2018_joined, pitchers_2019_joined, pitchers_2020_joined) %>% 
+  relocate(g:gs, .before = ip_tot) %>% 
+  relocate(id, .after = endurance)
+
+
+#CLEAN 2021 PITCHERS VS RHH
+clean_pitchers_2021_vs_rhh <- pitchers_2021_vs_rhh %>% 
+  clean_names() %>% 
+  relocate(year) %>% 
+  separate(player, into = c("player_name", "id"), sep = BACKSLASH) %>% 
+  mutate(player_name = str_remove_all(player_name, DOT),
+         player_name = str_remove(player_name, "Jr"),
+         player_name = str_trim(player_name),
+         first_name = str_extract(player_name, START %R% one_or_more(ALPHA)),
+         last_name = str_remove(player_name, START %R% one_or_more(ALPHA)),
+         last_name = str_trim(last_name),
+         first_initial = str_extract(player_name, START %R% ALPHA),
+         strat_name = paste(last_name, ",", first_initial, sep = ""),
+         strat_name = str_to_title(strat_name),
+         ip = str_replace(ip, DOT %R% "1", DOT %R% "33"),
+         ip = str_replace(ip, DOT %R% "2", DOT %R% "67"),
+         ip = as.numeric(ip)) %>% 
+  select(year, player_name, strat_name, bf, ip, g:gs, h = h_17, hr = hr_20, bb = bb_21, ibb = ibb_22, so = so_24,
+         hbp = hbp_25, bk, wp, whip, ab, x2b:x3b, sb:cs, ba:ops, tb:gdp, sf, b_abip, id)
+
+
+#CLEAN 2021 PITCHERS VS LHH
+clean_pitchers_2021_vs_lhh <- pitchers_2021_vs_lhh %>% 
+  clean_names() %>% 
+  relocate(year) %>% 
+  separate(player, into = c("player_name", "id"), sep = BACKSLASH) %>% 
+  mutate(player_name = str_remove_all(player_name, DOT),
+         player_name = str_remove(player_name, "Jr"),
+         player_name = str_trim(player_name),
+         first_name = str_extract(player_name, START %R% one_or_more(ALPHA)),
+         last_name = str_remove(player_name, START %R% one_or_more(ALPHA)),
+         last_name = str_trim(last_name),
+         first_initial = str_extract(player_name, START %R% ALPHA),
+         strat_name = paste(last_name, ",", first_initial, sep = ""),
+         strat_name = str_to_title(strat_name),
+         ip = str_replace(ip, DOT %R% "1", DOT %R% "33"),
+         ip = str_replace(ip, DOT %R% "2", DOT %R% "67"),
+         ip = as.numeric(ip)) %>% 
+  select(year, player_name, strat_name, bf, ip, h = h_17, hr = hr_20, bb = bb_21, ibb = ibb_22, so = so_24,
+         hbp = hbp_25, bk, wp, whip, ab, x2b:x3b, sb:cs, ba:ops, tb:gdp, sf, b_abip, id)
+
+#CREATE 2021 REAL BALL PITCHERS TEST SET
+pitchers_2021_test_data <- full_join(clean_pitchers_2021_vs_rhh, clean_pitchers_2021_vs_lhh, by = c("year", "player_name", "strat_name", "id"),
+                                     suffix = c("_rhh", "_lhh")) %>% 
+  mutate(ip_tot = round(ip_rhh+ip_lhh)) %>% 
+  relocate(ip_tot, .before = bf_rhh) %>% 
+  relocate(g:gs, .before = ip_tot) %>% 
+  arrange(desc(ip_tot))
+
+#CLEAN INTERMEDIATE PITCHING TABLES
+remove(clean_pitchers_2018_vs_lhh,
+       clean_pitchers_2018_vs_rhh,
+       clean_pitchers_2019_vs_lhh,
+       clean_pitchers_2019_vs_rhh,
+       clean_pitchers_2020_vs_lhh,
+       clean_pitchers_2020_vs_rhh,
+       clean_pitchers_2021_vs_lhh,
+       clean_pitchers_2021_vs_rhh,
+       clean_ratings_pitchers_2018,
+       clean_ratings_pitchers_2019,
+       clean_ratings_pitchers_2020,
+       pitchers_2018_joined,
+       pitchers_2019_joined,
+       pitchers_2020_joined,
+       pitchers_2018_vs_lhh,
+       pitchers_2018_vs_rhh,
+       pitchers_2019_vs_lhh,
+       pitchers_2019_vs_rhh,
+       pitchers_2020_vs_lhh,
+       pitchers_2020_vs_rhh,
+       pitchers_2021_vs_lhh,
+       pitchers_2021_vs_rhh,
+       ratings_2018_pitchers,
+       ratings_2019_pitchers,
+       ratings_2020_pitchers)
